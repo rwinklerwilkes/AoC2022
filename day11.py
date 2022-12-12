@@ -32,13 +32,20 @@ Monkey 3:
     If false: throw to monkey 1"""
 
 class Monkey:
-    def __init__(self, starting_items: list, operation: Callable[[int], int], test: int):
+    def __init__(self, starting_items: list, operation: str, test: int, name: int):
         self.items = starting_items
         self.operation = operation
         self.test = test
         self.true_monkey = None
         self.false_monkey = None
         self.inspect_count = 0
+        self.name = name
+
+    def __repr__(self):
+        return f'Monkey {self.name}: ' + ', '.join([str(s) for s in self.items])
+
+    def exec_operation(self, val):
+        return eval(self.operation.replace('old',str(val)))
 
     def set_test_targets(self, true_false, tf_monkey):
         if true_false:
@@ -47,13 +54,13 @@ class Monkey:
             self.false_monkey = tf_monkey
 
     def inspect(self, item):
-        worry = self.operation(item)
-        bored = round(worry/3, 0)
+        worry = self.exec_operation(item)
+        bored = worry//3
         pass_test = (bored % self.test) == 0
         if pass_test:
-            self.true_monkey.append(item)
+            self.true_monkey.items.append(bored)
         else:
-            self.false_monkey.append(item)
+            self.false_monkey.items.append(bored)
         self.inspect_count += 1
 
     def round(self):
@@ -68,21 +75,36 @@ def parse_monkeys(data):
     for m in monkeys:
         mn = int(re.match(r'Monkey ([0-9]+):', m[0]).group(1))
         msi = [int(i) for i in re.match(r'Starting items: ([0-9,\s]+)', m[1].strip()).group(1).split(',')]
-        op = lambda old: eval(re.match('Operation: new = (old [0-9+\-*/\s])', m[2].strip()).group(1)) #Operation: new = old + 6
+        op_match = re.match('Operation: new = (old [-0-9+*/ a-z]+)', m[2].strip()).group(1)
         test = int(re.match(r'Test: divisible by ([0-9]+)', m[3].strip()).group(1))
         tm = int(re.match(r'If true: throw to monkey ([0-9]+)', m[4].strip()).group(1))
         fm = int(re.match(r'If false: throw to monkey ([0-9]+)', m[5].strip()).group(1))
-        pm = Monkey(msi, op, test)
+        pm = Monkey(msi, op_match, test, mn)
         parsed_monkeys[mn] = pm
         ops.append([tm, fm])
 
     for i in range(len(ops)):
         tm = ops[i][0]
         fm = ops[i][1]
-        parsed_monkeys[i].set_test_targets(True,tm)
-        parsed_monkeys[i].set_test_targets(False, fm)
+        parsed_monkeys[i].set_test_targets(True, parsed_monkeys[tm])
+        parsed_monkeys[i].set_test_targets(False, parsed_monkeys[fm])
 
     return parsed_monkeys
 
-test_monkeys = parse_monkeys(test_data)
-test_monkeys[0].operation(79)
+def run_round(monkeys:dict):
+    for i in range(len(monkeys.keys())):
+        mky = monkeys[i]
+        mky.round()
+
+def part_one(data):
+    monkeys = parse_monkeys(data)
+    for i in range(20):
+        run_round(monkeys)
+    inspect_count_all = [m.inspect_count for m in monkeys.values()]
+    inspect_count_all = sorted(inspect_count_all,reverse=True)
+    score = inspect_count_all[0]*inspect_count_all[1]
+    return score
+
+test_answer_part_one = part_one(test_data)
+assert test_answer_part_one == 10605
+answer_part_one = part_one(data)
