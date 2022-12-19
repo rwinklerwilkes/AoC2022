@@ -97,6 +97,65 @@ def part_one(data):
                                     state.total + (state.rate*distance)))
     return max_flow
 
+def part_two(data):
+    graph = parse_data(data)
+    all_distances = nx.algorithms.floyd_warshall(graph)
+
+    worthwhile_nodes = [i for i in graph.nodes if graph.nodes[i]['flow'] > 0]
+    initial_state = State(1,'AA',[],0,0)
+
+    best_states = {}
+    all_states = {}
+    states = [initial_state]
+    while states:
+        state = states.pop()
+        valve = graph.nodes[state.position]
+        if state.minute == 26:
+            continue
+        if state.position not in state.opened and valve['worth_opening']:
+            new_state = State(state.minute + 1,
+                              state.position,
+                              state.opened.copy() + [state.position],
+                              state.rate + valve['flow'],
+                              state.total + state.rate
+                              )
+            states.append(new_state)
+            opened = new_state.opened
+            opened.sort()
+            #Make hashable
+            opened = tuple(opened)
+            if best_states.get(opened,0) < new_state.flow(end=26):
+                best_states[opened] = new_state.flow(end=26)
+                all_states[opened] = new_state
+            continue
+
+        for nd in worthwhile_nodes:
+            if nd not in state.opened:
+                distance = all_distances[state.position][nd]
+                if state.minute + distance > 26:
+                    continue
+                states.append(State(state.minute + distance,
+                                    nd,
+                                    state.opened.copy(),
+                                    state.rate,
+                                    state.total + (state.rate*distance)))
+
+    max_flow = 0
+    for human in all_states.values():
+        for elephant in all_states.values():
+            good_state = True
+            for v in human.opened:
+                if v in elephant.opened:
+                    good_state = False
+                    break
+            if good_state:
+                max_flow = max(max_flow, human.flow(26) + elephant.flow(26))
+    return max_flow
+
 test_part_one_answer = part_one(test_data)
 assert test_part_one_answer == 1651
 part_one_answer = part_one(data)
+
+test_part_two_answer = part_two(test_data)
+assert test_part_two_answer == 1707
+part_two_answer = part_two(data)
