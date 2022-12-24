@@ -18,6 +18,21 @@ class Cavern:
         self.top = 4
         self.all_shapes = {(x,0) for x in range(7)}
 
+    def draw(self):
+        x_shape = 7
+        y_shape = max([y for x,y in self.all_shapes]) + 1
+        board = [['_' for x in range(x_shape)] for y in range(y_shape)]
+        for yr in range(len(board)):
+            for xr in range(len(board[yr])):
+                if yr == 0:
+                    board[yr][xr] = '-'
+                elif (xr, yr) in self.all_shapes:
+                    board[yr][xr] = '+'
+        board_draw = '\n'.join([''.join(row) for row in reversed(board)])
+        print(board_draw)
+        return board_draw
+
+
     def set_shapes(self):
         shapes = [[(2, 0), (3, 0), (4, 0), (5, 0)],
                   [(3, 2), (2, 1), (3, 1), (4, 1), (3, 0)],
@@ -33,25 +48,21 @@ class Cavern:
         return {(x, ys + y) for x, ys in shape_to_use}
 
     def move_left(self, shape):
-        print('left')
         if any([x==0 for x,_ in shape]):
             return shape
         else:
             return {(x - 1, y) for x, y in shape}
 
     def move_right(self, shape):
-        print('right')
         if any([x == 6 for x, _ in shape]):
             return shape
         else:
-            return {(x +1, y) for x, y in shape}
+            return {(x + 1, y) for x, y in shape}
 
     def move_down(self, shape):
-        print('down')
         return {(x, y-1) for x, y in shape}
 
     def move_up(self, shape):
-        print('up')
         return {(x, y + 1) for x, y in shape}
 
     def push(self, shape):
@@ -59,11 +70,11 @@ class Cavern:
         if dir == '<':
             moved_shape = self.move_left(shape)
             if moved_shape.intersection(self.all_shapes):
-                moved_shape = self.move_right(shape)
+                moved_shape = shape
         elif dir == '>':
             moved_shape = self.move_right(shape)
             if moved_shape.intersection(self.all_shapes):
-                moved_shape = self.move_left(shape)
+                moved_shape = shape
         else:
             assert False
         self.jet_pos += 1
@@ -88,8 +99,7 @@ class Cavern:
             shape_to_use = self.drop_rock()
         return self.top - 4
 
-c = Cavern(test_data)
-c.drop_rock()
-c.drop_rock()
-c.drop_rock()
-c.drop_rock()
+test = Cavern(test_data)
+test_part_one_answer = test.part_one()
+actual = Cavern(data)
+part_one_answer = actual.part_one()
