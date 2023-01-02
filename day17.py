@@ -17,6 +17,11 @@ class Cavern:
         self.set_shapes()
         self.top = 4
         self.all_shapes = {(x,0) for x in range(7)}
+        #NOTE - this needs to be longer than the length of the cycle so you may need to update when rerunning
+        self.RECENT_SHAPES_TO_KEEP = 1700
+        self.recent_shapes = []
+        self.recent_heights = []
+        self.states = {}
 
     def draw(self):
         x_shape = 7
@@ -42,6 +47,8 @@ class Cavern:
         self.shapes = [set(s) for s in shapes]
 
     def get_shape(self, y):
+        self.recent_shapes.append(self.cur_shape)
+        self.recent_shapes = self.recent_shapes[-self.RECENT_SHAPES_TO_KEEP:]
         shape_to_use = self.shapes[self.cur_shape]
         self.cur_shape += 1
         self.cur_shape %= len(self.shapes)
@@ -84,6 +91,7 @@ class Cavern:
     def drop_rock(self):
         shape_to_use = self.get_shape(self.top)
         moving = True
+        last_top = self.top - 4
         while moving:
             shape_to_use = self.push(shape_to_use)
             shape_to_use = self.move_down(shape_to_use)
@@ -91,15 +99,57 @@ class Cavern:
                 shape_to_use = self.move_up(shape_to_use)
                 self.all_shapes = self.all_shapes.union(shape_to_use)
                 moving = False
-        self.top = max([y for x,y in self.all_shapes]) + 4
+        this_top = max([y for x,y in self.all_shapes])
+        self.recent_heights.append(this_top - last_top)
+        self.recent_heights = self.recent_heights[-self.RECENT_SHAPES_TO_KEEP:]
+        self.top = this_top + 4
         return shape_to_use
+
+    def find_cycle(self):
+        for i in range(4000):
+            shape_to_use = self.drop_rock()
+            state = (self.jet_pos, self.cur_shape, tuple(self.recent_shapes), tuple(self.recent_heights))
+            if state in self.states:
+                #cycle found
+                last_height = self.states[state][0]
+                last_i = self.states[state][1]
+                height_diff = self.top - 4 - last_height
+                i_diff = i - last_i
+                return state, last_i, last_height, height_diff, i_diff
+            else:
+                self.states[state] = (self.top - 4, i)
+        return None, None, None
+
+    def run_from_cycle(self, cycle_start, cycle_diff, cycle_end, height_start, height_diff):
+        number_of_cycles = (cycle_end - cycle_start) // cycle_diff
+        i_before_end = cycle_start + cycle_diff * number_of_cycles
+        height_before_end = height_start + height_diff * number_of_cycles
+        return i_before_end, height_before_end
+
+    def find_end_height(self, i_before_end, height_before_end, desired_i, state_to_run):
+        pass
 
     def part_one(self):
         for i in range(2022):
             shape_to_use = self.drop_rock()
         return self.top - 4
 
+    def part_two(self):
+        desired_height = 1000000000000
+        state, last_i, last_height, height_diff, i_diff = self.find_cycle()
+        i_before_end, height_before_end = self.run_from_cycle(last_i, i_diff, desired_height, last_height, height_diff)
+        height_diffs = state[3][-i_diff:]
+        remaining_height = sum(height_diffs[:desired_height - i_before_end - 1])
+        total_height = height_before_end + remaining_height
+        return total_height
+
 test = Cavern(test_data)
 test_part_one_answer = test.part_one()
 actual = Cavern(data)
 part_one_answer = actual.part_one()
+
+test = Cavern(test_data)
+test_part_two_answer = test.part_two()
+
+actual = Cavern(data)
+part_two_answer = actual.part_two()
